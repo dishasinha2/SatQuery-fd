@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root, [data-theme="dark"] {
+  --bg-primary: #050914;
+  --bg-secondary: #080e1e;
+  --surface: rgba(13, 20, 38, 0.75);
+  --surface-elevated: rgba(18, 28, 54, 0.88);
+  --surface-glass: rgba(10, 16, 32, 0.65);
+  --input-background: rgba(6, 11, 24, 0.85);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border: rgba(51, 65, 85, 0.65);
+  --border-subtle: rgba(30, 41, 59, 0.5);
+  --accent-primary: #06b6d4;
+  --accent-secondary: #3b82f6;
+  --accent-warm: #f59e0b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+  --header-bg: rgba(6, 11, 22, 0.7);
+  --sidebar-bg: rgba(6, 11, 22, 0.92);
+  --landing-title: #ffffff;
+}
+
+[data-theme="light"] {
+  --bg-primary: #e8f0fe;
+  --bg-secondary: #f1f5f9;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-elevated: rgba(255, 255, 255, 0.96);
+  --surface-glass: rgba(255, 255, 255, 0.78);
+  --input-background: rgba(255, 255, 255, 0.95);
+  --text-primary: #090d16;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border: rgba(203, 213, 225, 0.9);
+  --border-subtle: rgba(226, 232, 240, 0.85);
+  --accent-primary: #0284c7;
+  --accent-secondary: #2563eb;
+  --accent-warm: #d97706;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --header-bg: rgba(255, 255, 255, 0.88);
+  --sidebar-bg: rgba(255, 255, 255, 0.92);
+  --landing-title: #000000;
+}
+
+/* Base smooth transition for theme switching */
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Centralized Theme Utility Classes */
+.satquery-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+}
+
+.satquery-input {
+  background-color: var(--input-background) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+.satquery-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.satquery-input:focus {
+  border-color: var(--accent-primary) !important;
+}
