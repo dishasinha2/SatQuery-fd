@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageMode } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -16,7 +16,6 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
-  Edit2,
   KeyRound,
   FileCheck,
   Moon,
@@ -43,21 +42,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   }, [initialMode]);
 
   // ==========================================
-  // SIGNUP MULTI-STEP STATE
-  // Step 1: 'form' (Basic Info)
-  // Step 2: 'otp' (OTP Verification)
-  // Step 3: 'success' (Account Created)
-  // ==========================================
-  const [signupStep, setSignupStep] = useState<'form' | 'otp' | 'success'>('form');
+  // SIGNUP STATE
+  const [signupStep, setSignupStep] = useState<'form' | 'success'>('form');
 
   // Signup form fields (stored strictly in component memory - never persisted)
   const [fullName, setFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [aadhaarRaw, setAadhaarRaw] = useState(''); // strictly 12 digits
-  const [mobileNumber, setMobileNumber] = useState(''); // strictly 10 digits
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Password visibility
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -67,21 +59,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [signupErrors, setSignupErrors] = useState<{
     fullName?: string;
     email?: string;
-    aadhaar?: string;
-    mobile?: string;
     password?: string;
     confirmPassword?: string;
-    terms?: string;
   }>({});
-  const [signupSubmitted, setSignupSubmitted] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
-
-  // OTP Verification state
-  const [otpValues, setOtpValues] = useState<string[]>(['', '', '', '', '', '']);
-  const [otpError, setOtpError] = useState<string>('');
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(30);
-  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // ==========================================
   // LOGIN STATE
@@ -117,94 +97,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   };
   const isPasswordValid = Object.values(passwordCriteria).every(Boolean);
 
-  // Countdown timer for OTP
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (signupStep === 'otp' && resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => Math.max(0, prev - 1));
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [signupStep, resendCooldown]);
-
-  // ==========================================
-  // FORMATTING & INPUT HANDLERS
-  // ==========================================
-  const handleAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only accept numbers, max 12 digits
-    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 12);
-    setAadhaarRaw(digitsOnly);
-    if (signupSubmitted) {
-      if (digitsOnly.length === 12) {
-        setSignupErrors((prev) => ({ ...prev, aadhaar: undefined }));
-      } else {
-        setSignupErrors((prev) => ({
-          ...prev,
-          aadhaar: 'Enter a valid 12-digit Aadhaar ID.'
-        }));
-      }
-    }
-  };
-
-  const formatAadhaarDisplay = (val: string) => {
-    // Format as XXXX XXXX XXXX
-    const parts = [];
-    for (let i = 0; i < val.length; i += 4) {
-      parts.push(val.slice(i, i + 4));
-    }
-    return parts.join(' ');
-  };
-
-  const getMaskedAadhaar = (val: string) => {
-    if (val.length < 4) return 'XXXX XXXX XXXX';
-    const last4 = val.slice(-4);
-    return `XXXX XXXX ${last4}`;
-  };
-
-  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
-    setMobileNumber(digitsOnly);
-    if (signupSubmitted) {
-      if (/^[6-9]\d{9}$/.test(digitsOnly)) {
-        setSignupErrors((prev) => ({ ...prev, mobile: undefined }));
-      } else {
-        setSignupErrors((prev) => ({
-          ...prev,
-          mobile: 'Enter a valid 10-digit mobile number.'
-        }));
-      }
-    }
-  };
-
-  const getMaskedMobile = (val: string) => {
-    if (val.length < 4) return '+91 XXXXX XXXXX';
-    return `+91 ******${val.slice(-4)}`;
-  };
-
-  // ==========================================
-  // SIGNUP STEP 1: SEND OTP HANDLER
-  // ==========================================
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSignupSubmitted(true);
-
     const errors: typeof signupErrors = {};
 
-    if (!fullName.trim()) {
-      errors.fullName = 'Full name is required.';
+    if (fullName.trim().length < 2) {
+      errors.fullName = 'Enter your full name (at least 2 characters).';
     }
 
     if (!signupEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) {
       errors.email = 'Please enter a valid email address.';
-    }
-
-    if (aadhaarRaw.length !== 12) {
-      errors.aadhaar = 'Enter a valid 12-digit Aadhaar ID.';
-    }
-
-    if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
-      errors.mobile = 'Enter a valid 10-digit mobile number.';
     }
 
     if (!isPasswordValid) {
@@ -217,114 +119,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       errors.confirmPassword = 'Passwords do not match.';
     }
 
-    if (!agreedToTerms) {
-      errors.terms = 'You must agree to the terms and privacy policy.';
-    }
-
     setSignupErrors(errors);
 
     if (Object.keys(errors).length > 0) {
       return;
     }
 
-    // Trigger prototype Send OTP flow
-    setSendingOtp(true);
-    setTimeout(() => {
-      setSendingOtp(false);
-      setSignupStep('otp');
-      setResendCooldown(30);
-      setOtpValues(['', '', '', '', '', '']);
-      setOtpError('');
-      // Focus first OTP field
-      setTimeout(() => {
-        otpInputRefs.current[0]?.focus();
-      }, 100);
-    }, 600);
-  };
-
-  // ==========================================
-  // OTP INPUT HANDLERS
-  // ==========================================
-  const handleOtpChange = (index: number, val: string) => {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const newOtp = [...otpValues];
-    newOtp[index] = digit;
-    setOtpValues(newOtp);
-    setOtpError('');
-
-    // Auto advance focus
-    if (digit && index < 5) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (!otpValues[index] && index > 0) {
-        // Move back and clear previous
-        const newOtp = [...otpValues];
-        newOtp[index - 1] = '';
-        setOtpValues(newOtp);
-        otpInputRefs.current[index - 1]?.focus();
-      } else {
-        const newOtp = [...otpValues];
-        newOtp[index] = '';
-        setOtpValues(newOtp);
-      }
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pastedData) return;
-
-    const newOtp = [...otpValues];
-    for (let i = 0; i < 6; i++) {
-      newOtp[i] = pastedData[i] || '';
-    }
-    setOtpValues(newOtp);
-    setOtpError('');
-
-    const nextIndex = Math.min(pastedData.length, 5);
-    otpInputRefs.current[nextIndex]?.focus();
-  };
-
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    const fullOtp = otpValues.join('');
-    if (fullOtp.length !== 6) {
-      setOtpError('Enter the 6-digit verification code.');
-      return;
-    }
-
-    setVerifyingOtp(true);
-    setOtpError('');
-
-    setTimeout(() => {
-      setVerifyingOtp(false);
-      // Advance to success state
-      setSignupStep('success');
-    }, 700);
-  };
-
-  const handleResendOtp = () => {
-    if (resendCooldown > 0) return;
-    setResendCooldown(30);
-    setOtpValues(['', '', '', '', '', '']);
-    setOtpError('');
-    // Focus first input
-    otpInputRefs.current[0]?.focus();
-  };
-
-  const handleAutofillDemoOtp = () => {
-    setOtpValues(['7', '2', '9', '4', '1', '6']);
-    setOtpError('');
-    otpInputRefs.current[5]?.focus();
+    setFullName(fullName.trim());
+    setSignupEmail(signupEmail.trim());
+    setSignupStep('success');
   };
 
   // ==========================================
@@ -444,8 +247,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               ? 'SatQuery AI Access'
               : signupStep === 'success'
               ? 'Account Created Successfully'
-              : signupStep === 'otp'
-              ? 'Verify Mobile Number'
               : 'Create Your SatQuery AI Account'}
           </h1>
           <p
@@ -457,13 +258,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               ? 'Earth Observation Intelligence Platform'
               : signupStep === 'success'
               ? 'Your SatQuery AI analyst profile is ready.'
-              : signupStep === 'otp'
-              ? 'Enter the verification code for your registered mobile number.'
               : 'Register your analyst profile to access the Earth Observation Intelligence Platform.'}
           </p>
         </div>
 
-        {/* Global Tab Switcher (Sign In vs Create Account) - hidden if inside OTP or success state */}
+        {/* Global Tab Switcher (Sign In vs Create Account) */}
         {signupStep === 'form' && (
           <div
             className={`flex rounded-lg p-1 border mb-6 font-mono text-xs transition-colors ${
@@ -757,7 +556,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         {/* VIEW 2: SIGNUP - STEP 1 (Basic Information Form)                     */}
         {/* ==================================================================== */}
         {mode === 'signup' && signupStep === 'form' && (
-          <form onSubmit={handleSendOtp} className="space-y-3.5 text-left">
+          <form onSubmit={handleSignupSubmit} className="space-y-3.5 text-left">
             {/* 1. Full Name */}
             <div>
               <label
@@ -826,85 +625,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               )}
             </div>
 
-            {/* 3. Aadhaar ID (Safety: 12-digit format, never stored/persisted) */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label
-                  htmlFor="signup-aadhaar"
-                  className="block text-xs font-mono text-[var(--text-secondary)]"
-                >
-                  Aadhaar ID <span className="text-cyan-500">*</span>
-                </label>
-                <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {aadhaarRaw.length}/12 Digits
-                </span>
-              </div>
-              <div className="relative">
-                <Shield className={`w-4 h-4 absolute left-3 top-2.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-                <input
-                  id="signup-aadhaar"
-                  type="text"
-                  inputMode="numeric"
-                  value={formatAadhaarDisplay(aadhaarRaw)}
-                  onChange={handleAadhaarChange}
-                  placeholder="Enter 12-digit Aadhaar ID"
-                  className={`w-full satquery-input border rounded-lg pl-9 pr-3 py-2 text-xs font-mono tracking-wider transition-colors ${
-                    signupErrors.aadhaar ? '!border-red-500' : ''
-                  }`}
-                />
-              </div>
-              {signupErrors.aadhaar && (
-                <p className="mt-1 text-[11px] font-mono text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {signupErrors.aadhaar}
-                </p>
-              )}
-              {aadhaarRaw.length === 12 && !signupErrors.aadhaar && (
-                <div className={`mt-1 text-[10px] font-mono flex items-center gap-1 ${isDarkMode ? 'text-cyan-400/80' : 'text-cyan-700'}`}>
-                  <Check className="w-3 h-3 text-emerald-500" />
-                  <span>Masked preview: {getMaskedAadhaar(aadhaarRaw)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Aadhaar-linked Mobile Number */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label
-                  htmlFor="signup-mobile"
-                  className="block text-xs font-mono text-[var(--text-secondary)]"
-                >
-                  Aadhaar-linked Mobile Number <span className="text-cyan-500">*</span>
-                </label>
-                <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {mobileNumber.length}/10
-                </span>
-              </div>
-              <div className="relative">
-                <div className="absolute left-3 top-2 text-xs font-mono text-slate-500 select-none">
-                  +91
-                </div>
-                <input
-                  id="signup-mobile"
-                  type="tel"
-                  inputMode="numeric"
-                  value={mobileNumber}
-                  onChange={handleMobileChange}
-                  placeholder="Enter 10-digit mobile number"
-                  className={`w-full satquery-input border rounded-lg pl-12 pr-3 py-2 text-xs font-mono tracking-wider transition-colors ${
-                    signupErrors.mobile ? '!border-red-500' : ''
-                  }`}
-                />
-              </div>
-              {signupErrors.mobile && (
-                <p className="mt-1 text-[11px] font-mono text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {signupErrors.mobile}
-                </p>
-              )}
-            </div>
-
-            {/* 5. Create Password */}
+            {/* 3. Create Password */}
             <div>
               <label
                 htmlFor="signup-password"
@@ -1049,7 +770,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </div>
             </div>
 
-            {/* 6. Confirm Password */}
+            {/* 4. Confirm Password */}
             <div>
               <label
                 htmlFor="signup-confirm-password"
@@ -1103,64 +824,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               )}
             </div>
 
-            {/* Privacy Note (Verbatim requirement) */}
-            <div
-              className={`p-2.5 rounded-lg border text-[10px] font-mono flex items-start gap-2 ${
-                isDarkMode
-                  ? 'bg-slate-950/50 border-slate-800/80 text-slate-400'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
-            >
-              <Shield className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
-              <span>
-                Prototype verification flow. Identity verification and OTP delivery require an authorized backend service.
-              </span>
-            </div>
-
-            {/* 7. Terms / Consent Checkbox */}
-            <div>
-              <label className="flex items-start gap-2 text-xs font-mono cursor-pointer select-none text-[var(--text-secondary)]">
-                <input
-                  type="checkbox"
-                  id="signup-terms"
-                  checked={agreedToTerms}
-                  onChange={(e) => {
-                    setAgreedToTerms(e.target.checked);
-                    if (signupErrors.terms) {
-                      setSignupErrors((prev) => ({ ...prev, terms: undefined }));
-                    }
-                  }}
-                  className={`mt-0.5 rounded cursor-pointer ${
-                    isDarkMode
-                      ? 'border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-400'
-                      : 'border-slate-300 bg-white text-cyan-600 focus:ring-cyan-500'
-                  }`}
-                />
-                <span>
-                  I agree to the SatQuery AI terms and privacy policy.
-                </span>
-              </label>
-              {signupErrors.terms && (
-                <p className="mt-1 text-[11px] font-mono text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {signupErrors.terms}
-                </p>
-              )}
-            </div>
-
-            {/* Submit: Send OTP Button */}
+            {/* Submit */}
             <button
               type="submit"
-              id="signup-send-otp-btn"
+              id="signup-create-account-btn"
               disabled={
-                sendingOtp ||
-                !fullName ||
+                fullName.trim().length < 2 ||
                 !signupEmail ||
-                aadhaarRaw.length !== 12 ||
-                mobileNumber.length !== 10 ||
                 !isPasswordValid ||
-                signupPassword !== confirmPassword ||
-                !agreedToTerms
+                signupPassword !== confirmPassword
               }
               className={`w-full py-2.5 mt-2 rounded-lg font-bold font-mono text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                 isDarkMode
@@ -1168,17 +840,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   : 'bg-slate-900 hover:bg-black text-white shadow-md'
               }`}
             >
-              {sendingOtp ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>INITIALIZING OTP VERIFICATION...</span>
-                </>
-              ) : (
-                <>
-                  <span>SEND OTP</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
+              <span>Create Account</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
             {/* Quick footer switch to Login */}
@@ -1201,170 +864,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </button>
             </div>
           </form>
-        )}
-
-        {/* ==================================================================== */}
-        {/* VIEW 3: SIGNUP - STEP 2 (OTP Verification Screen)                    */}
-        {/* ==================================================================== */}
-        {mode === 'signup' && signupStep === 'otp' && (
-          <div className="text-left space-y-4">
-            {/* Header info card */}
-            <div
-              className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 ${
-                isDarkMode
-                  ? 'bg-slate-950/80 border-slate-800'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Registered Mobile:</span>
-                <span className={`font-bold ${isDarkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>{getMaskedMobile(mobileNumber)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>Aadhaar Linked:</span>
-                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{getMaskedAadhaar(aadhaarRaw)}</span>
-              </div>
-            </div>
-
-            {/* Prototype Demo Banner */}
-            <div
-              className={`p-3 rounded-lg border text-xs font-mono flex items-start justify-between gap-2 ${
-                isDarkMode
-                  ? 'bg-cyan-950/40 border-cyan-500/30 text-cyan-300'
-                  : 'bg-cyan-50/90 border-cyan-200 text-cyan-900'
-              }`}
-            >
-              <div>
-                <div className={`font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-cyan-200' : 'text-cyan-950'}`}>
-                  <Shield className={`w-3.5 h-3.5 ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`} />
-                  OTP verification demo (Prototype Mode)
-                </div>
-                <div className={`text-[11px] mt-0.5 ${isDarkMode ? 'text-cyan-400/80' : 'text-cyan-700'}`}>
-                  No actual SMS sent. Enter any 6 digits (e.g. 123456) or autofill.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleAutofillDemoOtp}
-                className={`px-2 py-1 rounded border text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-colors ${
-                  isDarkMode
-                    ? 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-500/40 text-cyan-300'
-                    : 'bg-white hover:bg-cyan-100 border-cyan-300 text-cyan-800 shadow-xs'
-                }`}
-              >
-                Autofill Demo
-              </button>
-            </div>
-
-            {/* 6-digit OTP Inputs */}
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div>
-                <label className={`block text-xs font-mono mb-2 text-center text-[var(--text-secondary)]`}>
-                  Enter 6-Digit Verification Code
-                </label>
-                <div className="flex justify-center gap-2 sm:gap-3">
-                  {otpValues.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => (otpInputRefs.current[idx] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      onPaste={idx === 0 ? handleOtpPaste : undefined}
-                      className={`w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-mono font-bold rounded-lg border transition-all focus:outline-none ${
-                        otpError
-                          ? 'border-red-500 text-red-500 bg-red-50/20'
-                          : digit
-                          ? isDarkMode
-                            ? 'border-cyan-400 text-cyan-300 bg-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.25)]'
-                            : 'border-cyan-600 text-cyan-800 bg-cyan-50/50 shadow-xs'
-                          : isDarkMode
-                          ? 'border-slate-800 text-white bg-slate-950/90 focus:border-cyan-500'
-                          : 'border-slate-300 text-slate-900 bg-white focus:border-cyan-600'
-                      }`}
-                    />
-                  ))}
-                </div>
-                {otpError && (
-                  <p className="mt-2 text-center text-xs font-mono text-red-500 flex items-center justify-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {otpError}
-                  </p>
-                )}
-              </div>
-
-              {/* Action Buttons: Verify OTP, Resend OTP, Change Number */}
-              <div className="space-y-2 pt-2">
-                <button
-                  type="submit"
-                  id="btn-verify-otp"
-                  disabled={verifyingOtp || otpValues.join('').length !== 6}
-                  className={`w-full py-2.5 rounded-lg font-bold font-mono text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                    isDarkMode
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-[0_4px_16px_rgba(6,182,212,0.3)]'
-                      : 'bg-slate-900 hover:bg-black text-white shadow-md'
-                  }`}
-                >
-                  {verifyingOtp ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>VERIFYING CODE...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>VERIFY OTP</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-
-                <div
-                  className={`flex items-center justify-between text-xs font-mono pt-2 border-t ${
-                    isDarkMode ? 'border-slate-800/80' : 'border-slate-200'
-                  }`}
-                >
-                  {/* Resend OTP */}
-                  {resendCooldown > 0 ? (
-                    <span className={`flex items-center gap-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                      Resend OTP in{' '}
-                      <span className={`font-bold ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>{resendCooldown}s</span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      className={`font-semibold hover:underline cursor-pointer flex items-center gap-1 ${
-                        isDarkMode ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-600 hover:text-cyan-700'
-                      }`}
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      Resend OTP
-                    </button>
-                  )}
-
-                  {/* Change Number */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSignupStep('form');
-                      setOtpValues(['', '', '', '', '', '']);
-                      setOtpError('');
-                    }}
-                    className={`transition-colors cursor-pointer flex items-center gap-1 ${
-                      isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    Change Number
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
         )}
 
         {/* ==================================================================== */}
@@ -1391,48 +890,21 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </p>
             </div>
 
-            {/* Profile summary preview */}
-            <div
-              className={`p-3.5 rounded-xl border text-left font-mono text-xs space-y-2 ${
-                isDarkMode
-                  ? 'bg-slate-950/80 border-slate-800'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Analyst:</span>
-                <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{fullName || 'SatQuery Analyst'}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Institutional ID:</span>
-                <span className={isDarkMode ? 'text-cyan-300' : 'text-cyan-700 font-medium'}>{signupEmail}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Verified Aadhaar:</span>
-                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{getMaskedAadhaar(aadhaarRaw)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className={isDarkMode ? 'text-slate-500' : 'text-slate-400'}>Linked Phone:</span>
-                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>{getMaskedMobile(mobileNumber)}</span>
-              </div>
-            </div>
-
             {/* Prototype notice */}
             <div className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
               Demo session initialized in-memory &bull; Zero sensitive data stored
             </div>
 
-            {/* Continue to Command Center */}
+            {/* Continue to Sign In */}
             <button
               type="button"
-              id="btn-continue-command-center"
+              id="btn-continue-sign-in"
               onClick={() => {
-                onSuccess({
-                  name: fullName || 'SatQuery Analyst',
-                  role: 'Earth Observation Analyst',
-                  email: signupEmail
-                });
-                onNavigate('dashboard');
+                setMode('login');
+                setSignupStep('form');
+                setSignupPassword('');
+                setConfirmPassword('');
+                setSignupErrors({});
               }}
               className={`w-full py-2.5 rounded-lg font-bold font-mono text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 isDarkMode
@@ -1440,7 +912,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   : 'bg-slate-900 hover:bg-black text-white shadow-md'
               }`}
             >
-              <span>Continue to Command Center</span>
+              <span>Continue to Sign In</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
