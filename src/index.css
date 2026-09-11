@@ -1,17 +1,5 @@
 @import "tailwindcss";
 
-/* Fine-pointer devices use the custom rocket; touch devices keep their native cursor behavior. */
-@media (pointer: fine) {
-  body, body * { cursor: none !important; }
-  .rocket-cursor { --rocket-x: -80px; --rocket-y: -80px; position:fixed; top:0; left:0; width:38px; height:38px; z-index:10000; pointer-events:none; transform:translate(var(--rocket-x), var(--rocket-y)) translate(-50%, -50%); will-change:transform; }
-  .rocket-cursor__body { position:relative; z-index:1; width:100%; height:100%; transform:rotate(-45deg); filter:drop-shadow(0 0 5px rgba(125,211,252,.95)) drop-shadow(0 0 11px rgba(167,139,250,.65)); transition:transform .18s ease,filter .18s ease; }
-  .rocket-cursor__flame { position:absolute; top:51%; left:0; width:10px; height:18px; border-radius:50% 50% 70% 70%; background:radial-gradient(ellipse at top,#fff 0%,#fcd34d 25%,#f97316 55%,#ef4444 82%,transparent 100%); transform:translate(-30%,-15%) rotate(-45deg); transform-origin:top; animation:rocket-flame .14s ease-in-out infinite alternate; filter:drop-shadow(0 0 5px #f97316); }
-  body.rocket-cursor--hovering .rocket-cursor__body { transform:rotate(-45deg) scale(1.25); filter:drop-shadow(0 0 9px #7dd3fc) drop-shadow(0 0 20px rgba(167,139,250,.9)); }
-  body.rocket-cursor--hovering .rocket-cursor__flame { height:24px; }
-  body.rocket-cursor--pressed .rocket-cursor__body { transform:rotate(-45deg) scale(.86); }
-  @keyframes rocket-flame { to { transform:translate(-30%,-15%) rotate(-45deg) scaleY(1.28) scaleX(.85); opacity:.85; } }
-}
-
 /* Initial launch sequence: moon opens to reveal the live landing page. */
 .launch-transition {
   position: fixed;

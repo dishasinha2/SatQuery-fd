@@ -16,7 +16,6 @@ import { CosmicBackground } from './components/CosmicBackground';
 import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { LaunchTransition } from './components/LaunchTransition';
-import { RocketCursor } from './components/RocketCursor';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageMode>('landing');
@@ -35,7 +34,6 @@ export default function App() {
     <ThemeProvider>
       <SidebarProvider>
         <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans relative selection:bg-cyan-500 selection:text-black">
-        <RocketCursor />
         {/* Persistent Environmental Cosmic Layer */}
         <CosmicBackground />
 
