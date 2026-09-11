@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { PageMode } from './types';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
@@ -15,11 +15,16 @@ import { SettingsPage } from './components/SettingsPage';
 import { CosmicBackground } from './components/CosmicBackground';
 import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider } from './context/SidebarContext';
+import { LaunchTransition } from './components/LaunchTransition';
+import { RocketCursor } from './components/RocketCursor';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageMode>('landing');
   const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null);
   const [activeFile, setActiveFile] = useState<File | null>(null);
+  const [isLaunchComplete, setIsLaunchComplete] = useState(false);
+
+  const finishLaunch = useCallback(() => setIsLaunchComplete(true), []);
 
   const handleImageUploaded = (file: File) => {
     setActiveFile(file);
@@ -30,6 +35,7 @@ export default function App() {
     <ThemeProvider>
       <SidebarProvider>
         <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans relative selection:bg-cyan-500 selection:text-black">
+        <RocketCursor />
         {/* Persistent Environmental Cosmic Layer */}
         <CosmicBackground />
 
@@ -98,6 +104,7 @@ export default function App() {
             />
           )}
         </div>
+        {!isLaunchComplete && <LaunchTransition onComplete={finishLaunch} />}
       </div>
     </SidebarProvider>
   </ThemeProvider>
